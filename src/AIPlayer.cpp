@@ -46,7 +46,7 @@ void AIPlayer::think(color &c_piece, int &id_piece, int &dice) const
     // ----------------------------------------------------------------- //
 
     // Si quiero poder manejar varias heurísticas, puedo usar la variable id del agente para usar una u otra.
-    /*switch (id)
+    switch (id)
     {
     case 0:
         valor = Poda_AlfaBeta(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, ValoracionTest);
@@ -57,23 +57,23 @@ void AIPlayer::think(color &c_piece, int &id_piece, int &dice) const
     case 2:
         // valor = Poda_AlfaBeta(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, MiValoracion2);
         break;
-    }*/
-
-    switch (id)
-    {
-    case 0:
-        thinkAleatorio(c_piece, id_piece, dice);
-        break;
-    case 1:
-        thinkAleatorioMasInteligente(c_piece, id_piece, dice);
-        break;
-    case 2:
-        thinkFichaMasAdelantada(c_piece, id_piece, dice);
-        break;
-    case 3:
-        thinkMejorOpcion(c_piece, id_piece, dice);
-        break;
     }
+    /*
+        switch (id)
+        {
+        case 0:
+            thinkAleatorio(c_piece, id_piece, dice);
+            break;
+        case 1:
+            thinkAleatorioMasInteligente(c_piece, id_piece, dice);
+            break;
+        case 2:
+            thinkFichaMasAdelantada(c_piece, id_piece, dice);
+            break;
+        case 3:
+            thinkMejorOpcion(c_piece, id_piece, dice);
+            break;
+        }*/
     cout << "Valor MiniMax: " << valor << "  Accion: " << str(c_piece) << " " << id_piece << " " << dice << endl;
 }
 
@@ -272,7 +272,6 @@ void AIPlayer::thinkMejorOpcion(color &c_piece, int &id_piece, int &dice) const
         }
     }
 }
-
 double AIPlayer::Poda_AlfaBeta(const Parchis &actual, int jugador, int profundidad, int profundidadMax, color &c_piece, int &id_piece, int dice, double alpha, double beta, double (*heuristica)(const Parchis &, int)) const
 {
     if (profundidad == profundidadMax or actual.gameOver())
@@ -282,7 +281,7 @@ double AIPlayer::Poda_AlfaBeta(const Parchis &actual, int jugador, int profundid
     else
     {
         ParchisBros hijos = actual.getChildren();
-        if (jugador == this->jugador)
+        if (jugador == actual.getCurrentPlayerId())
         { // Generamos hijos max
             for (ParchisBros::Iterator it = hijos.begin(); it != hijos.end(); ++it)
             {
@@ -302,18 +301,28 @@ double AIPlayer::Poda_AlfaBeta(const Parchis &actual, int jugador, int profundid
                     break;
                 }
             }
-            return alpha;
+            // return alpha;
         }
         else
         { // Generamos hijos min
             for (ParchisBros::Iterator it = hijos.begin(); it != hijos.end(); ++it)
             {
-                beta = min(beta, Poda_AlfaBeta(*it, jugador, profundidad + 1, profundidadMax, c_piece, id_piece, dice, alpha, beta, heuristica));
+                double better_beta = Poda_AlfaBeta(*it, jugador, profundidad + 1, profundidadMax, c_piece, id_piece, dice, alpha, beta, heuristica);
+                if (better_beta < beta)
+                    beta = better_beta;
                 if (alpha >= beta)
                 {
                     break;
                 }
             }
+            // return beta;
+        }
+        if (jugador == actual.getCurrentPlayerId())
+        {
+            return alpha;
+        }
+        else
+        {
             return beta;
         }
     }
