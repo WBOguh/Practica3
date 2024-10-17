@@ -52,7 +52,7 @@ void AIPlayer::think(color &c_piece, int &id_piece, int &dice) const
         valor = Poda_AlfaBeta(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, ValoracionTest);
         break;
     case 1:
-        valor = Poda_AlfaBeta(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, ValoracionTest);
+        valor = Poda_AlfaBeta(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, heuristicav1);
         break;
     case 2:
         // valor = Poda_AlfaBeta(*actual, jugador, 0, PROFUNDIDAD_ALFABETA, c_piece, id_piece, dice, alpha, beta, MiValoracion2);
@@ -272,7 +272,130 @@ void AIPlayer::thinkMejorOpcion(color &c_piece, int &id_piece, int &dice) const
         }
     }
 }
-double AIPlayer::Poda_AlfaBeta(const Parchis &actual, int jugador, int profundidad, int profundidadMax, color &c_piece, int &id_piece, int dice, double alpha, double beta, double (*heuristica)(const Parchis &, int)) const
+
+double AIPlayer::heuristicav1(const Parchis &estado, int jugador)
+{
+    int ganador = estado.getWinner();
+    int oponente = (jugador + 1) % 2;
+
+    // Si hay un ganador, devuelvo más/menos infinito, según si he ganado yo o el oponente.
+    if (ganador == jugador)
+    {
+        return gana;
+    }
+    else if (ganador == oponente)
+    {
+        return pierde;
+    }
+    else
+    {
+        // Colores que juega mi jugador y colores del oponente
+        vector<color> my_colors = estado.getPlayerColors(jugador);
+        vector<color> op_colors = estado.getPlayerColors(oponente);
+
+        // Recorro todas las fichas de mi jugador
+        int puntuacion_jugador = 0;
+        // Recorro colores de mi jugador.
+        for (int i = 0; i < my_colors.size(); i++)
+        {
+            color c = my_colors[i];
+            // Recorro las fichas de ese color.
+            for (int j = 0; j < num_pieces; j++)
+            {
+                // Valoro positivamente que la ficha esté en casilla segura o meta.
+                if (estado.isSafePiece(c, j))
+                {
+                    puntuacion_jugador += 7;
+                }
+                else if (estado.getBoard().getPiece(c, j).get_box().type == home)
+                {
+                    puntuacion_jugador -= 20;
+                }
+                else if (estado.getBoard().getPiece(c, j).get_box().type == final_queue)
+                {
+                    puntuacion_jugador += 10;
+                }
+                else if (estado.getBoard().getPiece(c, j).get_box().type == goal)
+                {
+                    puntuacion_jugador += 100;
+                }
+                puntuacion_jugador += 10 - estado.distanceToGoal(c, j);
+            }
+        }
+        if (estado.getPower(jugador) >= 0 and estado.getPower(jugador) < 50)
+            puntuacion_jugador += 7 + (estado.getPower(jugador) / 7);
+        else if ((estado.getPower(jugador) >= 50 and estado.getPower(jugador) < 60) or (estado.getPower(jugador) >= 70 and estado.getPower(jugador) < 75))
+            puntuacion_jugador += 25;
+        else if (estado.getPower(jugador) >= 60 and estado.getPower(jugador) < 65)
+            puntuacion_jugador -= 1000;
+        else if (estado.getPower(jugador) >= 65 and estado.getPower(jugador) < 70)
+            puntuacion_jugador += 15;
+        else if (estado.getPower(jugador) >= 80 and estado.getPower(jugador) < 85)
+            puntuacion_jugador -= 2000;
+        else if (estado.getPower(jugador) >= 85 and estado.getPower(jugador) < 90)
+            puntuacion_jugador += 30;
+        else if (estado.getPower(jugador) >= 90 and estado.getPower(jugador) < 95)
+            // puntuacion_jugador += 40;
+            puntuacion_jugador -= 4000;
+        else if (estado.getPower(jugador) >= 95 and estado.getPower(jugador) < 100)
+            puntuacion_jugador += 40;
+        else
+            puntuacion_jugador -= 5000;
+
+        // Recorro todas las fichas del oponente
+        int puntuacion_oponente = 0;
+        // Recorro colores del oponente.
+        for (int i = 0; i < op_colors.size(); i++)
+        {
+            color c = op_colors[i];
+            // Recorro las fichas de ese color.
+            for (int j = 0; j < num_pieces; j++)
+            {
+                if (estado.isSafePiece(c, j))
+                {
+                    // Valoro negativamente que la ficha esté en casilla segura o meta.
+                    puntuacion_oponente += 7;
+                }
+                else if (estado.getBoard().getPiece(c, j).get_box().type == home)
+                {
+                    puntuacion_oponente -= 20;
+                }
+                else if (estado.getBoard().getPiece(c, j).get_box().type == final_queue)
+                {
+                    puntuacion_oponente += 10;
+                }
+                else if (estado.getBoard().getPiece(c, j).get_box().type == goal)
+                {
+                    puntuacion_oponente += 100;
+                }
+                puntuacion_oponente += 100 - estado.distanceToGoal(c, j);
+            }
+        }
+        if (estado.getPower(oponente) >= 0 and estado.getPower(oponente) < 50)
+            puntuacion_oponente += 7 + (estado.getPower(jugador) / 7);
+        else if ((estado.getPower(oponente) >= 50 and estado.getPower(oponente) < 60) or (estado.getPower(jugador) >= 70 and estado.getPower(jugador) < 75))
+            puntuacion_oponente += 25;
+        else if (estado.getPower(oponente) >= 60 and estado.getPower(oponente) < 65)
+            puntuacion_oponente -= 1000;
+        else if (estado.getPower(oponente) >= 65 and estado.getPower(oponente) < 70)
+            puntuacion_oponente += 15;
+        else if (estado.getPower(oponente) >= 80 and estado.getPower(oponente) < 85)
+            puntuacion_oponente -= 2000;
+        else if (estado.getPower(oponente) >= 85 and estado.getPower(oponente) < 90)
+            puntuacion_oponente += 30;
+        else if (estado.getPower(oponente) >= 90 and estado.getPower(oponente) < 95)
+            // puntuacion_oponente += 40;
+            puntuacion_oponente -= 4000;
+        else if (estado.getPower(oponente) >= 95 and estado.getPower(oponente) < 100)
+            puntuacion_oponente += 40;
+        else
+            puntuacion_oponente -= 5000;
+
+        // Devuelvo la puntuación de mi jugador menos la puntuación del oponente.
+        return puntuacion_jugador - puntuacion_oponente;
+    }
+}
+double AIPlayer::Poda_AlfaBeta(const Parchis &actual, int jugador, int profundidad, int profundidadMax, color &c_piece, int &id_piece, int &dice, double alpha, double beta, double (*heuristica)(const Parchis &, int)) const
 {
     if (profundidad == profundidadMax or actual.gameOver())
     {
@@ -298,6 +421,7 @@ double AIPlayer::Poda_AlfaBeta(const Parchis &actual, int jugador, int profundid
                 }
                 if (alpha >= beta)
                 {
+                    // return beta;
                     break;
                 }
             }
@@ -312,6 +436,7 @@ double AIPlayer::Poda_AlfaBeta(const Parchis &actual, int jugador, int profundid
                     beta = better_beta;
                 if (alpha >= beta)
                 {
+                    // return alpha;
                     break;
                 }
             }
